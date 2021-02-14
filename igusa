@@ -1,0 +1,147 @@
+//IgusaBlock.java
+
+package com.novaventure.survivalessentials.registry.ModTools.Blocks;
+
+import net.minecraft.block.*;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.pathing.NavigationType;
+import net.minecraft.fluid.FluidState;
+import net.minecraft.tag.FluidTags;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.util.shape.VoxelShapes;
+import net.minecraft.world.BlockView;
+import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
+
+import java.util.Iterator;
+import java.util.Random;
+
+public class IgusaBlock extends Block {
+    protected static final VoxelShape SHAPE;
+
+    public IgusaBlock(Settings settings) {
+        super(settings);
+    }
+
+    public boolean canGrow(World world, Random random, BlockPos pos, BlockState state) {
+        return true;
+    }
+
+    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
+        BlockState blockState = world.getBlockState(pos.down());
+        if (blockState.getBlock() == this) {
+            return true;
+        } else {
+                if (blockState.isOf(Blocks.GRASS_BLOCK) || blockState.isOf(Blocks.GRAVEL)|| blockState.isOf(Blocks.DIRT) || blockState.isOf(Blocks.COARSE_DIRT) || blockState.isOf(Blocks.PODZOL) || blockState.isOf(Blocks.SAND) || blockState.isOf(Blocks.RED_SAND) || blockState.isOf(Blocks.CLAY)) {
+                    BlockPos blockPos = pos.down();
+                Iterator var6 = Direction.Type.HORIZONTAL.iterator();
+
+                while(var6.hasNext()) {
+                    Direction direction = (Direction)var6.next();
+                    BlockState blockState2 = world.getBlockState(blockPos.offset(direction));
+                    FluidState fluidState = world.getFluidState(blockPos.offset(direction));
+                    if (fluidState.isIn(FluidTags.WATER) || blockState2.isOf(Blocks.FROSTED_ICE)) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+
+    public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
+        if (entity instanceof LivingEntity && entity.getType() != EntityType.FOX && entity.getType() != EntityType.BEE) {
+            entity.slowMovement(state, new Vec3d(0.800000011920929D, 0.75D, 0.800000011920929D));
+            if (!world.isClient && (entity.lastRenderX != entity.getX() || entity.lastRenderZ != entity.getZ())) {
+                double d = Math.abs(entity.getX() - entity.lastRenderX);
+                double e = Math.abs(entity.getZ() - entity.lastRenderZ);
+                }
+            }
+    }
+
+    static {
+        SHAPE = net.minecraft.block.Block.createCuboidShape(2.0D, 0.0D, 2.0D, 14.0D, 16.0D, 14.0D);
+    }
+
+    public static final VoxelShape IgusaPlantBlockShape;
+    public static final VoxelShape IgusaPlantBlockCollisionShape;
+
+    public VoxelShape getOutlineShape(BlockState state, BlockView view, BlockPos pos, ShapeContext context) {
+        return IgusaPlantBlockShape;}
+
+    public VoxelShape getCollisionShape(BlockState state, BlockView view, BlockPos pos, ShapeContext context) {
+        return IgusaPlantBlockCollisionShape;
+    }
+
+    static {
+        IgusaPlantBlockShape = Block.createCuboidShape(4.0D, 0.0D, 4.0D, 12.0D, 16.0D, 12.0D);
+        IgusaPlantBlockCollisionShape = VoxelShapes.empty();
+    }
+
+    public boolean canPathfindThrough(BlockState state, BlockView world, BlockPos pos, NavigationType type) {
+        return type == NavigationType.AIR && !this.collidable ? true : super.canPathfindThrough(state, world, pos, type);
+    }
+}
+
+//IgusaFeature.java
+
+package com.novaventure.survivalessentials;
+
+import net.minecraft.block.BlockState;
+import net.minecraft.world.gen.feature.*;
+import net.minecraft.world.gen.feature.RandomPatchFeatureConfig.Builder;
+import net.minecraft.world.gen.placer.ColumnPlacer;
+import net.minecraft.world.gen.stateprovider.SimpleBlockStateProvider;
+
+import static com.novaventure.survivalessentials.SurvivalEssentials.IGUSA_BLOCK;
+
+public class IgusaFeature {
+    public static ConfiguredFeature<?, ?> OVERWORLD_IGUSA_FEATURE = Feature.FLOWER
+            .configure(new Builder(new SimpleBlockStateProvider(IgusaFeature.States.IGUSA_BLOCK),
+                    new ColumnPlacer(2, 2)).tries(20).spreadX(4).spreadY(0).spreadZ(4)
+            .cannotProject().needsWater().build());
+
+    public static final class States {
+        public static final BlockState IGUSA_BLOCK = SurvivalEssentials.IGUSA_BLOCK.getDefaultState();
+    }
+
+}
+
+//Initializer
+
+public class SurvivalEssentials implements ModInitializer {
+      public static final String MOD_ID = "novesues";
+      //igusa
+      public static final Block IGUSA_BLOCK = new IgusaBlock(FabricBlockSettings.of(Material.BAMBOO)
+            .breakByHand(true)
+            .sounds(BlockSoundGroup.BAMBOO_SAPLING)
+            .strength(1, 1.0f));
+      //igusa gen
+      private static final Feature<DefaultFeatureConfig> OVERWORLD_IGUSA_FEATURE = new SeaweedFeature(DefaultFeatureConfig.CODEC);
+
+      public static final ConfiguredFeature<?, ?> OVERWORLD_IGUSA_FEATURE_CONFIGURED = OVERWORLD_IGUSA_FEATURE.configure(FeatureConfig.DEFAULT)
+            .decorate(ConfiguredFeatures.Decorators.TOP_SOLID_HEIGHTMAP.spreadHorizontally())
+            .decorate(Decorator.COUNT_NOISE_BIASED.configure(new CountNoiseBiasedDecoratorConfig(120, 80.0D, 0.0D)));
+      
+      @Override
+        public void onInitialize() {
+            
+        //igusa block
+        Registry.register(Registry.BLOCK, new Identifier(MOD_ID, "igusa_short"), IGUSA_BLOCK);
+        Registry.register(Registry.ITEM, new Identifier(MOD_ID, "igusa_short"), new BlockItem(IGUSA_BLOCK, new Item.Settings().group(ItemGroup.DECORATIONS)));
+
+        //igusa gen
+        RegistryKey<ConfiguredFeature<?, ?>> igusaFeatureOverworld = RegistryKey.of(Registry.CONFIGURED_FEATURE_WORLDGEN,
+                new Identifier(MOD_ID, "overworld_igusa_feature"));
+        Registry.register(BuiltinRegistries.CONFIGURED_FEATURE, igusaFeatureOverworld.getValue(), OVERWORLD_IGUSA_FEATURE_CONFIGURED);
+        
+        BiomeModifications.addFeature(BiomeSelectors.includeByKey(SWAMP, SWAMP_HILLS, JUNGLE, JUNGLE_HILLS, BAMBOO_JUNGLE_HILLS, BAMBOO_JUNGLE, BIRCH_FOREST, BIRCH_FOREST_HILLS, TALL_BIRCH_HILLS, TALL_BIRCH_FOREST, RIVER, FROZEN_RIVER), GenerationStep.Feature.TOP_LAYER_MODIFICATION, igusaFeatureOverworld);
+        }
+      }
+
